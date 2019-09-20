@@ -98,15 +98,113 @@ app.delete('/api/owners/:id', function (req, res, next) {
 })
 
 // GET /api/owners/:id/pets
+app.get('/api/owners/:id/pets', function (req, res, next) {
+  const theOwner = getOwnerById(req.params.id)
+  if (theOwner) {
+    res.send(theOwner.pets)
+  } else {
+    res.sendStatus(404)
+    next()
+  }
+  console.log(theOwner)
+})
 
 // GET /api/owners/:id/pets/:petId
+app.get('/api/owners/:id/pets/:petId', function (req, res, next) {
+  const theOwner = getOwnerById(req.params.id)
+  if (theOwner) {
+    const thePet = getPetsById(theOwner.pets, req.params.petId)
+    if (thePet) {
+      res.json(thePet)
+    } else {
+      res.status(404).send('No pet found.')
+      next()
+    }
+    // console.log(thePet)
+  } else {
+    res.status(404).send('No owner found.')
+    next()
+  }
+})
 
 // POST /api/owners/:id/pets
+app.post('/api/owners/:id/pets', function (req, res, next) {
+  const result = owners.some(function (owner, idx) {
+    if (String(owner.id) === req.params.id) {
+      const numPets = owner.pets.length
+      const newPet = Object.assign(
+        {
+          id: owners[idx].pets[numPets - 1].id + 1
+        },
+        req.body
+      )
+      owners[idx].pets.push(newPet)
+      return true
+    }
+  })
+  if (result) {
+    res.json(getOwnerById(req.params.id))
+  } else {
+    res.status(404).send('No owner found.')
+    next()
+  }
+})
 
 // PUT /api/owners/:id/pets/:petId
+app.put('/api/owners/:id/pets/:petId', function (req, res, next) {
+  const result = owners.some(function (owner, idx) {
+    if (String(owner.id) === req.params.id) {
+      const resultPet = owner.pets.some(function (pet, petIdx) {
+        if (String(pet.id) === req.params.petId) {
+          owner.pets[petIdx].isComplete = true
+          return true
+        }
+      })
+      if (resultPet) {
+        res.json(owners[idx])
+      } else {
+        res.status(404).send('No pet found.')
+      }
+      return true
+    }
+  })
+  if (!result) {
+    res.status(404).send('No owner found.')
+    next()
+  }
+})
 
 // DELETE /api/owners/:id/pets/:petId
+app.delete('/api/owners/:id/pets/:petId', function (req, res, next) {
+  const theOwner = getOwnerById(req.params.id)
+  if (theOwner) {
+    const result = theOwner.pets.some(function(pet, idx){
+      if (String(pet.id) === req.params.petId){
+        theOwner.pets.splice(idx, 1)
+        res.send(owners)
+        return true
+      }
+    })
+    if (!result){
+      res.status(404).send('No pet found.')
+    }
+  } else {
+    res.status(404).send('No owner found.')
+  }
+})
 
 app.listen(3000, function () {
   console.log('Pets API is now listening on port 3000...')
 })
+
+function getOwnerById (id) {
+  return owners.find(function (owner) {
+    return id === String(owner.id)
+  })
+}
+
+function getPetsById (petArray, petId) {
+  return petArray.find(function (pet) {
+    return String(pet.id) === petId
+  })
+}
